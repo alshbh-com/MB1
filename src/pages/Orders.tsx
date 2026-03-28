@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Search, Filter, Package } from "lucide-react";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import OrderFormDialog from "@/components/OrderFormDialog";
@@ -31,6 +31,7 @@ const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
@@ -52,6 +53,30 @@ const Orders = () => {
     await supabase.from("orders").update({ status: status as any }).eq("id", id);
     fetchOrders();
     toast.success("تم تحديث الحالة");
+  };
+
+  const deleteOrder = async (order: Order) => {
+    if (order.invoice_id) {
+      toast.error("لا يمكن حذف أوردر مرتبط بفاتورة");
+      return;
+    }
+    if (!confirm("هل أنت متأكد من حذف هذا الأوردر؟")) return;
+    const { error } = await supabase.from("orders").delete().eq("id", order.id);
+    if (error) {
+      toast.error("حدث خطأ أثناء الحذف");
+    } else {
+      toast.success("تم حذف الأوردر");
+      fetchOrders();
+    }
+  };
+
+  const handleEdit = (order: Order) => {
+    if (order.invoice_id) {
+      toast.error("لا يمكن تعديل أوردر مرتبط بفاتورة");
+      return;
+    }
+    setEditOrder(order);
+    setShowForm(true);
   };
 
   const filteredOrders = orders.filter((o) => {
@@ -89,7 +114,7 @@ const Orders = () => {
           <h1 className="text-2xl font-bold text-foreground">الطلبات</h1>
           <p className="text-muted-foreground text-sm">إجمالي: {orders.length} • اليوم: {todayCount}</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2 font-medium text-sm hover:opacity-90 transition-opacity">
+        <button onClick={() => { setEditOrder(null); setShowForm(true); }} className="gradient-primary text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2 font-medium text-sm hover:opacity-90 transition-opacity">
           <Plus className="h-4 w-4" />
           إضافة أوردر
         </button>
@@ -158,13 +183,14 @@ const Orders = () => {
                 <th className="p-3 text-right">الحالة</th>
                 <th className="p-3 text-right">المودريتور</th>
                 <th className="p-3 text-right">التاريخ</th>
+                <th className="p-3 text-right w-20">إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
               ) : filteredOrders.length === 0 ? (
-                <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">لا توجد طلبات</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">لا توجد طلبات</td></tr>
               ) : (
                 filteredOrders.map((order, i) => (
                   <motion.tr
@@ -207,6 +233,26 @@ const Orders = () => {
                     <td className="p-3 text-muted-foreground text-xs">
                       {order.created_at ? new Date(order.created_at).toLocaleDateString("ar-EG") : "-"}
                     </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEdit(order)}
+                          disabled={!!order.invoice_id}
+                          className="text-primary hover:text-primary/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="تعديل"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteOrder(order)}
+                          disabled={!!order.invoice_id}
+                          className="text-destructive hover:text-destructive/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="حذف"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
                   </motion.tr>
                 ))
               )}
@@ -216,7 +262,13 @@ const Orders = () => {
       </div>
 
       <AnimatePresence>
-        {showForm && <OrderFormDialog onClose={() => setShowForm(false)} onSuccess={() => { setShowForm(false); fetchOrders(); }} />}
+        {showForm && (
+          <OrderFormDialog
+            onClose={() => { setShowForm(false); setEditOrder(null); }}
+            onSuccess={() => { setShowForm(false); setEditOrder(null); fetchOrders(); }}
+            editOrder={editOrder ? { id: editOrder.id, product_id: editOrder.product_id, info: editOrder.info, total_price: editOrder.total_price } : null}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

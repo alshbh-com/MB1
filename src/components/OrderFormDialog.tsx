@@ -11,17 +11,25 @@ interface Product {
   price: number;
 }
 
+interface OrderToEdit {
+  id: string;
+  product_id: string | null;
+  info: string | null;
+  total_price: number;
+}
+
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  editOrder?: OrderToEdit | null;
 }
 
-const OrderFormDialog = ({ onClose, onSuccess }: Props) => {
+const OrderFormDialog = ({ onClose, onSuccess, editOrder }: Props) => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [productId, setProductId] = useState("");
-  const [info, setInfo] = useState("");
-  const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [productId, setProductId] = useState(editOrder?.product_id || "");
+  const [info, setInfo] = useState(editOrder?.info || "");
+  const [totalPrice, setTotalPrice] = useState<number>(editOrder?.total_price || 0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,23 +43,39 @@ const OrderFormDialog = ({ onClose, onSuccess }: Props) => {
     if (!productId) { toast.error("اختر منتج"); return; }
     setLoading(true);
 
-    const { error } = await supabase.from("orders").insert({
-      product_id: productId,
-      info,
-      total_price: totalPrice,
-      created_by: user?.id,
-      customer_name: "",
-      phone: "",
-      address: "",
-      governorate: "",
-    });
+    if (editOrder) {
+      const { error } = await supabase.from("orders").update({
+        product_id: productId,
+        info,
+        total_price: totalPrice,
+      }).eq("id", editOrder.id);
 
-    setLoading(false);
-    if (error) {
-      toast.error("حدث خطأ: " + error.message);
+      setLoading(false);
+      if (error) {
+        toast.error("حدث خطأ: " + error.message);
+      } else {
+        toast.success("تم تعديل الأوردر بنجاح ✅");
+        onSuccess();
+      }
     } else {
-      toast.success("تم إنشاء الأوردر بنجاح 🎉");
-      onSuccess();
+      const { error } = await supabase.from("orders").insert({
+        product_id: productId,
+        info,
+        total_price: totalPrice,
+        created_by: user?.id,
+        customer_name: "",
+        phone: "",
+        address: "",
+        governorate: "",
+      });
+
+      setLoading(false);
+      if (error) {
+        toast.error("حدث خطأ: " + error.message);
+      } else {
+        toast.success("تم إنشاء الأوردر بنجاح 🎉");
+        onSuccess();
+      }
     }
   };
 
@@ -71,7 +95,9 @@ const OrderFormDialog = ({ onClose, onSuccess }: Props) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">إضافة أوردر جديد</h2>
+          <h2 className="text-lg font-bold text-foreground">
+            {editOrder ? "تعديل الأوردر" : "إضافة أوردر جديد"}
+          </h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
         </div>
 
@@ -117,7 +143,7 @@ const OrderFormDialog = ({ onClose, onSuccess }: Props) => {
             disabled={loading}
             className="w-full gradient-primary text-primary-foreground font-semibold py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
           >
-            {loading ? "جاري الإنشاء..." : "إنشاء أوردر"}
+            {loading ? (editOrder ? "جاري التعديل..." : "جاري الإنشاء...") : (editOrder ? "حفظ التعديلات" : "إنشاء أوردر")}
           </button>
         </form>
       </motion.div>
