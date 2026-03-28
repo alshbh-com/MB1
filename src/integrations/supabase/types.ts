@@ -85,6 +85,7 @@ export type Database = {
           customer_name: string
           governorate: string
           id: string
+          info: string | null
           invoice_id: string | null
           order_number: number
           phone: string
@@ -95,16 +96,17 @@ export type Database = {
           total_price: number
         }
         Insert: {
-          address: string
+          address?: string
           color?: string | null
           created_at?: string | null
           created_by?: string | null
-          customer_name: string
-          governorate: string
+          customer_name?: string
+          governorate?: string
           id?: string
+          info?: string | null
           invoice_id?: string | null
           order_number?: number
-          phone: string
+          phone?: string
           product_id?: string | null
           quantity?: number | null
           size?: string | null
@@ -119,6 +121,7 @@ export type Database = {
           customer_name?: string
           governorate?: string
           id?: string
+          info?: string | null
           invoice_id?: string | null
           order_number?: number
           phone?: string
