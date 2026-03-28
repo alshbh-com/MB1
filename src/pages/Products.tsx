@@ -52,7 +52,15 @@ const Products = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("حذف المنتج؟")) return;
-    await supabase.from("products").delete().eq("id", id);
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) {
+      if (error.code === "23503") {
+        toast.error("لا يمكن حذف المنتج لأنه مرتبط بطلبات موجودة");
+      } else {
+        toast.error("حدث خطأ أثناء الحذف");
+      }
+      return;
+    }
     toast.success("تم الحذف");
     fetchProducts();
   };
