@@ -63,7 +63,7 @@ const InvoiceCopy = ({ invoice, orders }: Props) => {
 
 const InvoicePrintView = ({ invoice, orders }: Props) => {
   return (
-    <div className="hidden print:block" style={{ width: "128mm", height: "150mm", display: "flex", margin: 0, padding: "3mm", boxSizing: "border-box", background: "#fff" }}>
+    <div className="hidden print:block" style={{ width: "128mm", height: "375mm", display: "flex", margin: 0, padding: "3mm", boxSizing: "border-box", background: "#fff" }}>
       <style>{`
         @media print {
           .hidden.print\\:block { display: flex !important; }
